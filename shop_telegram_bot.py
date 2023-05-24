@@ -22,8 +22,6 @@ _database = None
 
 def error_handler(bot, update, error):
     logger.error(f'Телеграм бот упал с ошибкой: {error}', exc_info=True)
-    print(f'так так {update}')
-    print(f'не так {error}')
 
 
 def start(bot, update, client_id, client_secret):
@@ -42,40 +40,27 @@ def start(bot, update, client_id, client_secret):
         reply_markup=reply_markup,
     )
 
-    return 'HANDLE_MENU'
+    return 'HANDLE_DESCRIPTION'
 
 
 def handle_menu(bot, update, client_id, client_secret):
-    query = update.callback_query
-
-    product_id = query.data
     moltin_token = get_moltin_token(client_id, client_secret)
+    products = get_products(moltin_token)
 
-    product = get_product(moltin_token, product_id)
-    stock = get_stock(moltin_token, product_id)
-    price = get_price(moltin_token, product_id)
-    image_link = get_product_image(moltin_token, product_id)
-
-    keyboard = [
-        [InlineKeyboardButton('Назад', callback_data='Назад')],
-    ]
+    keyboard = [[InlineKeyboardButton(
+        product['attributes']['name'],
+        callback_data=product['id']
+    ) for product in products]]
 
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    text = f'''
-               {product["attributes"]["name"]}
-               {price["USD"]["amount"]} USD per kg
-               {stock} on stock
-               {product["attributes"]["description"]}
-               '''
-
-    bot.send_photo(
-        chat_id=query.message.chat_id,
-        photo=image_link,
-        caption=textwrap.dedent(text),
+    update.callback_query.message.reply_text(
+        'Товары магазина:',
         reply_markup=reply_markup,
     )
-    bot.delete_message(chat_id=query.message.chat.id, message_id=query.message.message_id)
+
+    bot.delete_message(chat_id=update.callback_query.message.chat.id,
+                       message_id=update.callback_query.message.message_id)
 
     return 'HANDLE_DESCRIPTION'
 
@@ -84,17 +69,40 @@ def handle_description(bot, update, client_id, client_secret):
     query = update.callback_query
 
     if query.data == 'Назад':
-        return 'HANDLE_MENU'
+        handle_menu(bot, update, client_id, client_secret)
+        return 'HANDLE_DESCRIPTION'
 
+    else:
+        product_id = query.data
+        moltin_token = get_moltin_token(client_id, client_secret)
 
-def echo(bot, update):
-    query = update.callback_query
+        product = get_product(moltin_token, product_id)
+        stock = get_stock(moltin_token, product_id)
+        price = get_price(moltin_token, product_id)
+        image_link = get_product_image(moltin_token, product_id)
 
-    bot.edit_message_text(text="Selected option: {}".format(query.data),
-                          chat_id=query.message.chat_id,
-                          message_id=query.message.message_id)
+        keyboard = [
+            [InlineKeyboardButton('Назад', callback_data='Назад')],
+        ]
 
-    return "ECHO"
+        reply_markup = InlineKeyboardMarkup(keyboard)
+
+        text = f'''
+                   {product["attributes"]["name"]}
+                   {price["USD"]["amount"]} USD per kg
+                   {stock} on stock
+                   {product["attributes"]["description"]}
+                   '''
+
+        bot.send_photo(
+            chat_id=query.message.chat_id,
+            photo=image_link,
+            caption=textwrap.dedent(text),
+            reply_markup=reply_markup,
+        )
+        bot.delete_message(chat_id=query.message.chat.id, message_id=query.message.message_id)
+
+    return 'HANDLE_DESCRIPTION'
 
 
 def handle_users_reply(bot, update, client_id, client_secret):
@@ -131,11 +139,11 @@ def handle_users_reply(bot, update, client_id, client_secret):
             client_secret=client_secret
         ),
         'HANDLE_DESCRIPTION': partial(
-            handle_menu,
+            handle_description,
             client_id=client_id,
             client_secret=client_secret
         ),
-        'ECHO': echo
+
     }
     state_handler = states_functions[user_state]
 

@@ -2,17 +2,17 @@ import requests
 
 
 def main():
-    moltin_access_token = get_moltin_token()
+    pass
 
-    get_products(moltin_access_token)
 
-    url = 'https://api.moltin.com/v2/carts/1/items'
+def add_product_to_cart(moltin_access_token, product_id, amount, customer_id):
+    url = f'https://api.moltin.com/v2/carts/{customer_id}/items'
 
     payload = {
         'data': {
-            'id': '00622eba-324d-4792-9800-4b7149d78e0f',
+            'id': product_id,
             'type': 'cart_item',
-            'quantity': 1
+            'quantity': amount
         }
     }
     headers = {
@@ -20,18 +20,20 @@ def main():
         'Content-Type': 'application/json'
     }
     response = requests.post(url, json=payload, headers=headers)
+    print(response.json())
 
-    url = 'https://api.moltin.com/v2/carts/1'
+    # url = f'https://api.moltin.com/v2/carts/1'
+    # headers = {
+    #     'Authorization': f'Bearer {moltin_access_token}',
+    # }
+    # response = requests.get(url, headers=headers)
+
+    url = f'https://api.moltin.com/v2/carts/{customer_id}/items'
     headers = {
         'Authorization': f'Bearer {moltin_access_token}',
     }
     response = requests.get(url, headers=headers)
-
-    url = 'https://api.moltin.com/v2/carts/1/items'
-    headers = {
-        'Authorization': f'Bearer {moltin_access_token}',
-    }
-    response = requests.get(url, headers=headers)
+    print(response.json())
 
 
 def get_moltin_token(client_key, secret_key):

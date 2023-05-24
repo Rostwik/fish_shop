@@ -13,7 +13,8 @@ from telegram.ext import CallbackQueryHandler, CommandHandler, MessageHandler
 from logger_handler import TelegramLogsHandler
 from dotenv import load_dotenv
 
-from moltin import get_moltin_token, get_products, get_product, get_stock, get_price, get_product_image
+from moltin import get_moltin_token, get_products, get_product, get_stock, get_price, get_product_image, \
+    add_product_to_cart
 
 logger = logging.getLogger('shop_tg_bot')
 
@@ -68,6 +69,15 @@ def handle_menu(bot, update, client_id, client_secret):
 def handle_description(bot, update, client_id, client_secret):
     query = update.callback_query
 
+    if 'kg' in query.data:
+        chat_id = query.message.chat.id
+        amount, _, product_id = query.data.split()
+
+        moltin_token = get_moltin_token(client_id, client_secret)
+        add_product_to_cart(moltin_token, product_id, int(amount), chat_id)
+
+        return 'HANDLE_DESCRIPTION'
+
     if query.data == 'Назад':
         handle_menu(bot, update, client_id, client_secret)
         return 'HANDLE_DESCRIPTION'
@@ -82,6 +92,9 @@ def handle_description(bot, update, client_id, client_secret):
         image_link = get_product_image(moltin_token, product_id)
 
         keyboard = [
+            [InlineKeyboardButton('1 kg', callback_data=f'1 kg {product_id}'),
+             InlineKeyboardButton('5 kg', callback_data=f'5 kg {product_id}'),
+             InlineKeyboardButton('10 kg', callback_data=f'10 kg {product_id}')],
             [InlineKeyboardButton('Назад', callback_data='Назад')],
         ]
 

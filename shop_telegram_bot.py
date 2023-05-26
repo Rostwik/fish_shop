@@ -14,7 +14,7 @@ from logger_handler import TelegramLogsHandler
 from dotenv import load_dotenv
 
 from moltin import get_moltin_token, get_products, get_product, get_stock, get_price, get_product_image, \
-    add_product_to_cart
+    add_product_to_cart, get_cart_items
 
 logger = logging.getLogger('shop_tg_bot')
 
@@ -51,7 +51,9 @@ def handle_menu(bot, update, client_id, client_secret):
     keyboard = [[InlineKeyboardButton(
         product['attributes']['name'],
         callback_data=product['id']
-    ) for product in products]]
+    ) for product in products],
+        [InlineKeyboardButton('Корзина', callback_data='Корзина')],
+    ]
 
     reply_markup = InlineKeyboardMarkup(keyboard)
 
@@ -68,18 +70,24 @@ def handle_menu(bot, update, client_id, client_secret):
 
 def handle_description(bot, update, client_id, client_secret):
     query = update.callback_query
+    moltin_token = get_moltin_token(client_id, client_secret)
+    chat_id = query.message.chat.id
 
     if 'kg' in query.data:
-        chat_id = query.message.chat.id
         amount, _, product_id = query.data.split()
 
-        moltin_token = get_moltin_token(client_id, client_secret)
         add_product_to_cart(moltin_token, product_id, int(amount), chat_id)
 
         return 'HANDLE_DESCRIPTION'
 
     if query.data == 'Назад':
         handle_menu(bot, update, client_id, client_secret)
+
+        return 'HANDLE_DESCRIPTION'
+
+    if query.data == 'Корзина':
+        products_in_cart, products_sum = get_cart_items(moltin_token, chat_id)
+        print(products_in_cart)
         return 'HANDLE_DESCRIPTION'
 
     else:
@@ -96,6 +104,7 @@ def handle_description(bot, update, client_id, client_secret):
              InlineKeyboardButton('5 kg', callback_data=f'5 kg {product_id}'),
              InlineKeyboardButton('10 kg', callback_data=f'10 kg {product_id}')],
             [InlineKeyboardButton('Назад', callback_data='Назад')],
+            [InlineKeyboardButton('Корзина', callback_data='Корзина')],
         ]
 
         reply_markup = InlineKeyboardMarkup(keyboard)
@@ -117,6 +126,8 @@ def handle_description(bot, update, client_id, client_secret):
 
     return 'HANDLE_DESCRIPTION'
 
+def handle_cart(bot, update, client_id, client_secret):
+    pass
 
 def handle_users_reply(bot, update, client_id, client_secret):
     db = get_database_connection()
@@ -153,6 +164,11 @@ def handle_users_reply(bot, update, client_id, client_secret):
         ),
         'HANDLE_DESCRIPTION': partial(
             handle_description,
+            client_id=client_id,
+            client_secret=client_secret
+        ),
+        'HANDLE_CART': partial(
+            handle_cart,
             client_id=client_id,
             client_secret=client_secret
         ),

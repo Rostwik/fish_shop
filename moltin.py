@@ -22,19 +22,23 @@ def add_product_to_cart(moltin_access_token, product_id, amount, customer_id):
     response = requests.post(url, json=payload, headers=headers)
     print(response.json())
 
-    # url = f'https://api.moltin.com/v2/carts/1'
-    # headers = {
-    #     'Authorization': f'Bearer {moltin_access_token}',
-    # }
-    # response = requests.get(url, headers=headers)
 
+def get_cart_items(moltin_access_token, customer_id):
     url = f'https://api.moltin.com/v2/carts/{customer_id}/items'
     headers = {
         'Authorization': f'Bearer {moltin_access_token}',
     }
     response = requests.get(url, headers=headers)
-    print(response.json())
+    cart_items = response.json()['data']
 
+    url = f'https://api.moltin.com/v2/carts/{customer_id}'
+    headers = {
+        'Authorization': f'Bearer {moltin_access_token}',
+    }
+    response = requests.get(url, headers=headers)
+    items_sum = response.json()['data']['meta']['display_price']['amount']
+
+    return cart_items, items_sum
 
 def get_moltin_token(client_key, secret_key):
     url = 'https://api.moltin.com/oauth/access_token'

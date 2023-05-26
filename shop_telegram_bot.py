@@ -14,7 +14,7 @@ from logger_handler import TelegramLogsHandler
 from dotenv import load_dotenv
 
 from moltin import get_moltin_token, get_products, get_product, get_stock, get_price, get_product_image, \
-    add_product_to_cart, get_cart_items
+    add_product_to_cart, get_cart_items, delete_cart_item
 
 logger = logging.getLogger('shop_tg_bot')
 
@@ -86,9 +86,8 @@ def handle_description(bot, update, client_id, client_secret):
         return 'HANDLE_DESCRIPTION'
 
     if query.data == 'Корзина':
-        products_in_cart, products_sum = get_cart_items(moltin_token, chat_id)
-        print(products_in_cart)
-        return 'HANDLE_DESCRIPTION'
+        handle_cart(bot, update, client_id, client_secret)
+        return 'HANDLE_CART'
 
     else:
         product_id = query.data
@@ -126,8 +125,48 @@ def handle_description(bot, update, client_id, client_secret):
 
     return 'HANDLE_DESCRIPTION'
 
+
 def handle_cart(bot, update, client_id, client_secret):
-    pass
+    query = update.callback_query
+    moltin_token = get_moltin_token(client_id, client_secret)
+    chat_id = query.message.chat.id
+
+    if 'Убрать' in query.data:
+        _, product_id = query.data.split()
+        delete_cart_item(moltin_token, chat_id, product_id)
+
+    cart, products_sum = get_cart_items(moltin_token, chat_id)
+
+    cart_list = ''
+    keyboard = []
+    if cart:
+        for item in cart:
+            product_price = item['unit_price']['amount']
+            cart_list += textwrap.dedent(
+                f'''
+                {item["name"]}
+                {item["description"]}
+                ${product_price} per kg
+                {item["quantity"]} kg in cart for ${item["value"]['amount']}
+                '''
+            )
+            keyboard.append([InlineKeyboardButton(f'Убрать из корзины {item["name"]}',
+                                                  callback_data=f'Убрать {item["id"]}')])
+        cart_list += f'\nTotal: ${products_sum}'
+
+    else:
+        cart_list = 'Здесь пусто!'
+
+    keyboard.append([InlineKeyboardButton('В меню', callback_data='В меню')])
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    bot.send_message(chat_id=query.message.chat_id, text=cart_list, reply_markup=reply_markup)
+
+    bot.delete_message(chat_id=update.callback_query.message.chat.id,
+                       message_id=update.callback_query.message.message_id)
+
+    return 'HANDLE_CART'
+
 
 def handle_users_reply(bot, update, client_id, client_secret):
     db = get_database_connection()

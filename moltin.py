@@ -20,7 +20,6 @@ def add_product_to_cart(moltin_access_token, product_id, amount, customer_id):
         'Content-Type': 'application/json'
     }
     response = requests.post(url, json=payload, headers=headers)
-    print(response.json())
 
 
 def get_cart_items(moltin_access_token, customer_id):
@@ -36,9 +35,10 @@ def get_cart_items(moltin_access_token, customer_id):
         'Authorization': f'Bearer {moltin_access_token}',
     }
     response = requests.get(url, headers=headers)
-    items_sum = response.json()['data']['meta']['display_price']['amount']
+    items_sum = response.json()['data']['meta']['display_price']['with_tax']['amount']
 
     return cart_items, items_sum
+
 
 def get_moltin_token(client_key, secret_key):
     url = 'https://api.moltin.com/oauth/access_token'
@@ -120,6 +120,15 @@ def get_product_image(moltin_access_token, product_id):
     image_link = response.json()['data']['link']['href']
 
     return image_link
+
+
+def delete_cart_item(moltin_access_token, chat_id, product_id):
+    headers = {
+        'Authorization': f'Bearer {moltin_access_token}',
+    }
+    cart_url = f'https://api.moltin.com/v2/carts/{chat_id}/items/{product_id}'
+    response = requests.delete(cart_url, headers=headers)
+    response.raise_for_status()
 
 
 if __name__ == '__main__':

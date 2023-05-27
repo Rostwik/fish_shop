@@ -167,12 +167,13 @@ def handle_cart(bot, update, client_id, client_secret):
             keyboard.append([InlineKeyboardButton(f'Убрать из корзины {item["name"]}',
                                                   callback_data=f'Убрать {item["id"]}')])
         cart_list += f'\nTotal: ${products_sum}'
+        keyboard.append([InlineKeyboardButton('Оплатить', callback_data='Оплатить')])
 
     else:
-        cart_list = 'Здесь пусто!'
+        cart_list = 'Пожалуйста, перейдите в меню и выберите товар.'
 
     keyboard.append([InlineKeyboardButton('В меню', callback_data='В меню')])
-    keyboard.append([InlineKeyboardButton('Оплатить', callback_data='Оплатить')])
+
     reply_markup = InlineKeyboardMarkup(keyboard)
 
     bot.send_message(chat_id=query.message.chat_id, text=cart_list, reply_markup=reply_markup)
@@ -285,7 +286,7 @@ def get_database_connection():
         redis_bd_credentials = os.getenv('REDIS_BD_CREDENTIALS')
         _database = redis.from_url(redis_bd_credentials)
         _database.ping()
-        # _database.flushdb()
+
     return _database
 
 

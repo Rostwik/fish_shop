@@ -185,7 +185,6 @@ def handle_cart(bot, update, client_id, client_secret):
 
 def handle_email(bot, update, client_id, client_secret):
     query = update.callback_query
-    moltin_token = get_moltin_token(client_id, client_secret)
     keyboard = []
 
     if update.message:
@@ -194,6 +193,7 @@ def handle_email(bot, update, client_id, client_secret):
         chat_id = update.message.chat_id
         email_check = re.match(r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)+$', email)
         if email_check:
+            moltin_token = get_moltin_token(client_id, client_secret)
             customer = create_and_check_customer(moltin_token, name, email)
 
             keyboard = [

@@ -1,5 +1,6 @@
 import os
 import logging
+import re
 import textwrap
 from functools import partial
 
@@ -14,7 +15,7 @@ from logger_handler import TelegramLogsHandler
 from dotenv import load_dotenv
 
 from moltin import get_moltin_token, get_products, get_product, get_stock, get_price, get_product_image, \
-    add_product_to_cart, get_cart_items, delete_cart_item
+    add_product_to_cart, get_cart_items, delete_cart_item, create_and_check_customer
 
 logger = logging.getLogger('shop_tg_bot')
 
@@ -87,6 +88,7 @@ def handle_description(bot, update, client_id, client_secret):
 
     if query.data == 'Корзина':
         handle_cart(bot, update, client_id, client_secret)
+
         return 'HANDLE_CART'
 
     else:
@@ -135,6 +137,18 @@ def handle_cart(bot, update, client_id, client_secret):
         _, product_id = query.data.split()
         delete_cart_item(moltin_token, chat_id, product_id)
 
+    if query.data == 'В меню':
+        handle_menu(bot, update, client_id, client_secret)
+
+        return 'HANDLE_DESCRIPTION'
+
+    if query.data == 'Оплатить':
+        bot.send_message(
+            chat_id=update.callback_query.message.chat_id,
+            text='Для согласовния оплаты, пожалуйста, укажите Ваш email'
+        )
+        return 'WAITING_EMAIL'
+
     cart, products_sum = get_cart_items(moltin_token, chat_id)
 
     cart_list = ''
@@ -158,6 +172,7 @@ def handle_cart(bot, update, client_id, client_secret):
         cart_list = 'Здесь пусто!'
 
     keyboard.append([InlineKeyboardButton('В меню', callback_data='В меню')])
+    keyboard.append([InlineKeyboardButton('Оплатить', callback_data='Оплатить')])
     reply_markup = InlineKeyboardMarkup(keyboard)
 
     bot.send_message(chat_id=query.message.chat_id, text=cart_list, reply_markup=reply_markup)
@@ -166,6 +181,45 @@ def handle_cart(bot, update, client_id, client_secret):
                        message_id=update.callback_query.message.message_id)
 
     return 'HANDLE_CART'
+
+
+def handle_email(bot, update, client_id, client_secret):
+    query = update.callback_query
+    moltin_token = get_moltin_token(client_id, client_secret)
+    keyboard = []
+
+    if update.message:
+        name = update.message.chat.username
+        email = update.message.text
+        chat_id = update.message.chat_id
+        email_check = re.match(r'^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)+$', email)
+        if email_check:
+            customer = create_and_check_customer(moltin_token, name, email)
+
+            keyboard = [
+                [InlineKeyboardButton('Верно', callback_data='Верно')],
+                [InlineKeyboardButton('Неверно', callback_data='Неверно')],
+            ]
+
+            text = f'{customer["name"]}, Ваш email {customer["email"]}?'
+        else:
+            text = 'Кажется, Вы ввели неверный email, попробуйте еще раз, пожалуйста'
+
+    if query:
+        if query.data == 'В меню':
+            handle_menu(bot, update, client_id, client_secret)
+            return 'HANDLE_DESCRIPTION'
+        elif query.data == 'Верно':
+            text = f'Спасибо за заказ, мы всегда рады видеть Вас снова!'
+        elif query.data == 'Неверно':
+            text = f'Ничего страшного, просто введите Ваш адрес еще раз.'
+        chat_id = query.message.chat_id
+
+    keyboard.append([InlineKeyboardButton('В меню', callback_data='В меню')])
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    bot.send_message(chat_id=chat_id, text=text, reply_markup=reply_markup)
+
+    return 'WAITING_EMAIL'
 
 
 def handle_users_reply(bot, update, client_id, client_secret):
@@ -208,6 +262,11 @@ def handle_users_reply(bot, update, client_id, client_secret):
         ),
         'HANDLE_CART': partial(
             handle_cart,
+            client_id=client_id,
+            client_secret=client_secret
+        ),
+        'WAITING_EMAIL': partial(
+            handle_email,
             client_id=client_id,
             client_secret=client_secret
         ),

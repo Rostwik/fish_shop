@@ -134,6 +134,16 @@ def create_and_check_customer(moltin_access_token, name, email):
     headers = {
         'Authorization': f'Bearer {moltin_access_token}'
     }
+
+    url = 'https://api.moltin.com/v2/customers'
+    response = requests.get(url, headers=headers)
+    response.raise_for_status()
+
+    customers = response.json()['data']
+    for customer in customers:
+        if customer['name'] == name and customer['email'] == email:
+            return customer
+
     payload = {
         'data': {
             'type': 'customer',
@@ -142,6 +152,7 @@ def create_and_check_customer(moltin_access_token, name, email):
             'password': '',
         },
     }
+
     url = 'https://api.moltin.com/v2/customers'
     response = requests.post(url, headers=headers, json=payload)
     response.raise_for_status()

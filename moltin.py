@@ -55,7 +55,7 @@ def get_moltin_token(client_key, secret_key):
     }
 
     time_label = datetime.datetime.now().timestamp()
-    if not token_lifetime or token_lifetime <= time_label:
+    if token_lifetime is None or token_lifetime <= time_label:
         response = requests.post(url, data=payload)
         response.raise_for_status()
         token_response = response.json()

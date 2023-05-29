@@ -1,4 +1,8 @@
+import datetime
+
 import requests
+
+token_lifetime, access_token = None, None
 
 
 def add_product_to_cart(moltin_access_token, product_id, amount, customer_id):
@@ -40,6 +44,8 @@ def get_cart_items(moltin_access_token, customer_id):
 
 
 def get_moltin_token(client_key, secret_key):
+    global token_lifetime, access_token
+
     url = 'https://api.moltin.com/oauth/access_token'
 
     payload = {
@@ -47,11 +53,16 @@ def get_moltin_token(client_key, secret_key):
         'client_secret': secret_key,
         'grant_type': 'client_credentials',
     }
-    response = requests.post(url, data=payload)
-    response.raise_for_status()
-    moltin_access_token = response.json()['access_token']
 
-    return moltin_access_token
+    time_label = datetime.datetime.now().timestamp()
+    if not token_lifetime or token_lifetime <= time_label:
+        response = requests.post(url, data=payload)
+        response.raise_for_status()
+        token_response = response.json()
+        access_token = token_response['access_token']
+        token_lifetime = token_response['expires']
+
+    return access_token
 
 
 def get_products(moltin_access_token):

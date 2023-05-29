@@ -20,8 +20,6 @@ To work with the shop_telegram_bot.py application:
 - create two bots (you can obtain bot from @BotFather in Telegram) and get tokens from them, one bot for the chatbot, the second for error monitoring
   (you can obtain bot from @BotFather in Telegram, [See example](https://telegra.ph/Awesome-Telegram-Bot-11-11))
 - create the file .env and fill in this data:
-- create bot (you can obtain bot from @BotFather in Telegram) and get token from it
-- create the file .env and fill in this data:
   - TELEGRAM_API_TOKEN - use this token for shop
   - TELEGRAM_MONITOR_API_TOKEN - use this token for error monitoring
   - TELEGRAM_CHAT_ID a unique identifier of the telegram administrator of the telegram chatbot, to whom possible errors will be directed
